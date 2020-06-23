@@ -4,8 +4,10 @@ Music classification:
   Logistic Regression
   Random Forest
   SVM
+  
   In progress:
     Chromaprinting for additional features
+    
 Recommendation:
   In progress
   
