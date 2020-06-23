@@ -1,0 +1,152 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#Json parallel\n",
+    "#test train split set from lib\n",
+    "    #save lib to file\n",
+    "\n",
+    "import pandas as pd\n",
+    "import json\n",
+    "import spotipy\n",
+    "from spotipy.oauth2 import SpotifyClientCredentials\n",
+    "import os"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#client\n",
+    "import spotipy\n",
+    "from spotipy.oauth2 import SpotifyClientCredentials\n",
+    "import os\n",
+    "\n",
+    "def init_cred(cid):\n",
+    "    '''client credentials flow. promtps for secret. returns sp object'''\n",
+    "    secret = input(\"Give secret ID: \")\n",
+    "    if secret:\n",
+    "        os.environ['SPOTIPY_CLIENT_ID']= cid\n",
+    "        os.environ['SPOTIPY_CLIENT_SECRET']= secret\n",
+    "        client_credentials_manager = SpotifyClientCredentials()\n",
+    "        return spotipy.Spotify(client_credentials_manager=client_credentials_manager)\n",
+    "    else:\n",
+    "        raise ValueError('Need a secret ID.')\n",
+    "\n",
+    "def searchID(sp, q):\n",
+    "    data = sp.search(q, limit=1, offset=0, type='track')['tracks']['items']\n",
+    "    if len(data) > 0:\n",
+    "        return data[0]['id']\n",
+    "    return ''\n",
+    "\n",
+    "def j2pd_playlists(fileName:str) -> dict:\n",
+    "    ''' returns a dict of DF's for each playlist. '''\n",
+    "    outp = {}\n",
+    "    pl_data = jsonToData(fileName)\n",
+    "    for i in pl_data['playlists']:\n",
+    "        df_pl = pd.DataFrame(columns = ['trackName','artistName','albumName'])\n",
+    "        pl_name = i['name']\n",
+    "        for j in i['items']:\n",
+    "            track = j['track']\n",
+    "            df_pl = pd.concat([df_pl, pd.DataFrame.from_dict([track])], ignore_index=True)\n",
+    "        outp[pl_name] = df_pl\n",
+    "    return outp"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sp = init_cred('73dfaea6d85240e8bf6e69b48e12339e')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "output_type": "execute_result",
+     "data": {
+      "text/plain": "               trackName                      artistName  \\\n0                Waiting                             Vök   \n1  Blow Your Mind (Mwah)                        Dua Lipa   \n2             These Days                             Wet   \n3                  Touch                      Little Mix   \n4               The Robe  Think Twice with David Ryshpan   \n\n                          albumName  \n0                           Waiting  \n1             Blow Your Mind (Mwah)  \n2                         Don't You  \n3  Glory Days: The Platinum Edition  \n4                     Jazz Carnival  ",
+      "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>trackName</th>\n      <th>artistName</th>\n      <th>albumName</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>Waiting</td>\n      <td>Vök</td>\n      <td>Waiting</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>Blow Your Mind (Mwah)</td>\n      <td>Dua Lipa</td>\n      <td>Blow Your Mind (Mwah)</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>These Days</td>\n      <td>Wet</td>\n      <td>Don't You</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>Touch</td>\n      <td>Little Mix</td>\n      <td>Glory Days: The Platinum Edition</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>The Robe</td>\n      <td>Think Twice with David Ryshpan</td>\n      <td>Jazz Carnival</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+     },
+     "metadata": {},
+     "execution_count": 4
+    }
+   ],
+   "source": [
+    "def jsonToData(fileName:str) -> dict:\n",
+    "    ''' returns data for json as dict. '''\n",
+    "    with open(fileName, encoding='utf-8') as f:\n",
+    "        data = json.load(f)\n",
+    "    return data\n",
+    "\n",
+    "pl_file = 'SpotifyData/Playlist1.json'\n",
+    "df_arch = j2pd_playlists(pl_file)['Archive']\n",
+    "df_arch.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df_arch['q'] = df_arch['trackName'] + ' ' + df_arch['artistName']\n",
+    "df_arch['id'] = df_arch['q'].apply(lambda x: searchID(sp, x))\n",
+    "df_arch.head()\n",
+    "# df_arch.to_csv('df_arch.csv', header=True, index=False, encoding='UTF-8')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "output_type": "execute_result",
+     "data": {
+      "text/plain": "              trackName         artistName  \\\n0         Hidden Driver             LVL UP   \n1  I Want U - GANZ Flip  Alison Wonderland   \n2          Warning Call           CHVRCHES   \n3                 Fresh          Specifics   \n4        IV. Sweatpants   Childish Gambino   \n\n                                          albumName  \\\n0                                    Return to Love   \n1                                               Run   \n2  Warning Call (Theme from Mirror's Edge Catalyst)   \n3                                                II   \n4                              Because The Internet   \n\n                                        q                      id  \n0                    Hidden Driver LVL UP  0076oEQq8IToGfnzU3bTHY  \n1  I Want U - GANZ Flip Alison Wonderland  00CujlY4ya5p2FNDu9BCZP  \n2                   Warning Call CHVRCHES  00EXQo4oF8LyQMa8byKvGM  \n3                         Fresh Specifics  00gC1pe84Yz6NnvNER8rc2  \n4         IV. Sweatpants Childish Gambino  00GOPLxW4PGQuUYdPJh8K1  ",
+      "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>trackName</th>\n      <th>artistName</th>\n      <th>albumName</th>\n      <th>q</th>\n      <th>id</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>Hidden Driver</td>\n      <td>LVL UP</td>\n      <td>Return to Love</td>\n      <td>Hidden Driver LVL UP</td>\n      <td>0076oEQq8IToGfnzU3bTHY</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>I Want U - GANZ Flip</td>\n      <td>Alison Wonderland</td>\n      <td>Run</td>\n      <td>I Want U - GANZ Flip Alison Wonderland</td>\n      <td>00CujlY4ya5p2FNDu9BCZP</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>Warning Call</td>\n      <td>CHVRCHES</td>\n      <td>Warning Call (Theme from Mirror's Edge Catalyst)</td>\n      <td>Warning Call CHVRCHES</td>\n      <td>00EXQo4oF8LyQMa8byKvGM</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>Fresh</td>\n      <td>Specifics</td>\n      <td>II</td>\n      <td>Fresh Specifics</td>\n      <td>00gC1pe84Yz6NnvNER8rc2</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>IV. Sweatpants</td>\n      <td>Childish Gambino</td>\n      <td>Because The Internet</td>\n      <td>IV. Sweatpants Childish Gambino</td>\n      <td>00GOPLxW4PGQuUYdPJh8K1</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+     },
+     "metadata": {},
+     "execution_count": 7
+    }
+   ],
+   "source": [
+    "df_arch = pd.read_csv('df_arch.csv', sep=',', header=0, encoding='UTF-8')\n",
+    "df_arch.head()"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.6-final"
+  },
+  "orig_nbformat": 2,
+  "kernelspec": {
+   "name": "python37664bitminmetiscondaed090fa7ed9e416881481bda443ecc9d",
+   "display_name": "Python 3.7.6 64-bit ('minmetis': conda)"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
